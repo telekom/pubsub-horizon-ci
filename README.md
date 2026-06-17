@@ -44,8 +44,8 @@ jobs:
       component: starlight
       language: java
     secrets:
-      REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_TARDIS_PUSH_USER }}
-      REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_TARDIS_PUSH_TOKEN }}
+      REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+      REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
 ```
 
 ### Go component (e.g., Golaris)
@@ -80,8 +80,8 @@ jobs:
       component: golaris
       language: go
     secrets:
-      REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_TARDIS_PUSH_USER }}
-      REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_TARDIS_PUSH_TOKEN }}
+      REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+      REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
 ```
 
 ## Registry
@@ -104,8 +104,8 @@ Each component repo needs these GitHub secrets:
 
 | Secret | Value |
 |--------|-------|
-| `ARTIFACTORY_TARDIS_PUSH_USER` | Artifactory service account username |
-| `ARTIFACTORY_TARDIS_PUSH_TOKEN` | Artifactory service account token |
+| `ARTIFACTORY_O28M_PUSH_USER` | Artifactory service account username |
+| `ARTIFACTORY_O28M_PUSH_TOKEN` | Artifactory service account token |
 
 ## Components
 
