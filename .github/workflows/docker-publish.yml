@@ -1,0 +1,149 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Docker Publish
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: "Component name (e.g., starlight, golaris)"
+        required: true
+        type: string
+      language:
+        description: "Build language: java or go"
+        required: true
+        type: string
+      dockerfile:
+        description: "Path to Dockerfile"
+        required: false
+        type: string
+        default: "Dockerfile"
+      java-version:
+        description: "Java version (only for language=java)"
+        required: false
+        type: string
+        default: "21"
+      go-version-file:
+        description: "Go version file path (only for language=go)"
+        required: false
+        type: string
+        default: "go.mod"
+      build-args:
+        description: "Docker build args (newline-separated KEY=VALUE)"
+        required: false
+        type: string
+        default: ""
+      init-gradle-path:
+        description: "Path to init.gradle for snapshot resolution"
+        required: false
+        type: string
+        default: ""
+      registry-host:
+        description: "Registry hostname"
+        required: false
+        type: string
+        default: "artifactory.devops.telekom.de"
+      image-path:
+        description: "Image path within registry (e.g., tardis-oci-local/components/horizon)"
+        required: false
+        type: string
+        default: "tardis-oci-local/components/horizon"
+    secrets:
+      REGISTRY_USERNAME:
+        description: "Registry push username"
+        required: true
+      REGISTRY_PASSWORD:
+        description: "Registry push token"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  FULL_IMAGE: ${{ inputs.registry-host }}/${{ inputs.image-path }}/${{ inputs.component }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+      image-digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      # --- Java build (conditional) ---
+      - name: Set up JDK
+        if: inputs.language == 'java'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - name: Setup Gradle
+        if: inputs.language == 'java'
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
+
+      - name: Configure init.gradle
+        if: inputs.language == 'java' && inputs.init-gradle-path != ''
+        run: |
+          mkdir -p /home/runner/.gradle/init.d
+          cp "${{ inputs.init-gradle-path }}" /home/runner/.gradle/init.d/
+
+      - name: Build JAR
+        if: inputs.language == 'java'
+        run: ./gradlew build -x test
+
+      # --- Go build (conditional) ---
+      - name: Set up Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      # --- Image metadata ---
+      - name: Determine image tag
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG=$(echo "${GITHUB_REF}" | sed 's|^refs/tags/||')
+          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            TAG="latest"
+          else
+            TAG="sha-${GITHUB_SHA::8}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Image will be tagged: ${TAG}"
+
+      # --- Docker login ---
+      - name: Login to registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | \
+            docker login "${{ inputs.registry-host }}" \
+              -u "${{ secrets.REGISTRY_USERNAME }}" \
+              --password-stdin
+
+      # --- Docker build ---
+      - name: Build Docker image
+        run: |
+          BUILD_ARGS=""
+          if [[ -n "${{ inputs.build-args }}" ]]; then
+            while IFS= read -r arg; do
+              [[ -n "$arg" ]] && BUILD_ARGS="${BUILD_ARGS} --build-arg ${arg}"
+            done <<< "${{ inputs.build-args }}"
+          fi
+          docker build \
+            -t "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}" \
+            -f "${{ inputs.dockerfile }}" \
+            ${BUILD_ARGS} .
+
+      # --- Docker push ---
+      - name: Push Docker image
+        id: push
+        run: |
+          docker push "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}" 2>/dev/null | cut -d@ -f2 || echo "")
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "Pushed: ${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}"

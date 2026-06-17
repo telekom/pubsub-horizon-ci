@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Linting
+
+on:
+  workflow_call:
+    inputs:
+      lint-version:
+        description: "golangci-lint version"
+        required: false
+        type: string
+        default: "v2.6.1"
+      go-version-file:
+        description: "File to read Go version from"
+        required: false
+        type: string
+        default: "go.mod"
+      working-directory:
+        description: "Working directory for linting"
+        required: false
+        type: string
+        default: "."
+      args:
+        description: "Additional golangci-lint args"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+        with:
+          version: ${{ inputs.lint-version }}
+          working-directory: ${{ inputs.working-directory }}
+          args: ${{ inputs.args }}

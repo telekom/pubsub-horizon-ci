@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Go Test
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: "File to read Go version from"
+        required: false
+        type: string
+        default: "go.mod"
+      test-tags:
+        description: "Build tags for go test (e.g. testing)"
+        required: false
+        type: string
+        default: ""
+      test-flags:
+        description: "Additional go test flags (e.g. -p 1 for serial)"
+        required: false
+        type: string
+        default: "-v"
+      service-ports:
+        description: "DinD port mappings as JSON array (e.g. [\"5701:5701\",\"27017:27017\"])"
+        required: false
+        type: string
+        default: "[]"
+      env-vars:
+        description: "Environment variables for test step as JSON object"
+        required: false
+        type: string
+        default: "{}"
+      coverage-badge:
+        description: "Generate and push coverage badge to badges branch"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:25-dind
+        ports:
+          - 2375:2375
+          - 5701:5701
+          - 9094:9094
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - name: Run go test
+        env: ${{ fromJson(inputs.env-vars) }}
+        run: |
+          TAGS_FLAG=""
+          if [[ -n "${{ inputs.test-tags }}" ]]; then
+            TAGS_FLAG="-tags=${{ inputs.test-tags }}"
+          fi
+          go test ${{ inputs.test-flags }} ./... \
+            -coverprofile=./cover.out \
+            -covermode=atomic \
+            -coverpkg=./... \
+            ${TAGS_FLAG}
+
+      - name: Generate coverage report
+        if: inputs.coverage-badge
+        run: go tool cover -html=cover.out -o=./out/reports/coverage-report.html
+
+      - name: Check test coverage
+        if: inputs.coverage-badge
+        uses: vladopajic/go-test-coverage@f190f667e23b4441202d0bab0f8c2e7bce8925b6 # v2
+        with:
+          profile: cover.out
+          local-prefix: github.com/telekom/${{ github.event.repository.name }}
+          badge-file-name: ./out/badges/coverage.svg
+          git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
+          git-branch: badges
