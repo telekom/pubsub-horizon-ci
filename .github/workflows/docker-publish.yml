@@ -112,7 +112,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             TAG="latest"
           elif [[ "${GITHUB_REF}" == refs/heads/* ]]; then
-            TAG=$(echo "${GITHUB_REF}" | sed 's|^refs/heads/||; s|/|-|g')
+            TAG=$(echo "${GITHUB_REF}" | sed 's|^refs/heads/||' | tr '[:upper:]' '[:lower:]' | sed 's|[/.]|-|g; s|--*|-|g; s|^-||; s|-$||' | cut -c1-63)
           else
             TAG="sha-${GITHUB_SHA::8}"
           fi
