@@ -4,13 +4,13 @@ Reusable GitHub Actions workflows for building, testing, and publishing [Horizon
 
 ## Workflows
 
-| Workflow | Purpose | Caller trigger |
-|----------|---------|----------------|
-| `gradle-build.yml` | Build + test Java/Gradle projects with JaCoCo coverage | `push`, `pull_request` |
-| `go-test.yml` | Build + test Go projects with DinD services | `push`, `pull_request` |
-| `golangci-lint.yml` | Go static analysis | `push`, `pull_request` |
-| `docker-publish.yml` | Build Docker image + push to Artifactory | `push tags` |
-| `reuse-compliance.yml` | REUSE/SPDX license header check | `push`, `pull_request` |
+| Workflow | Purpose |
+|----------|---------|
+| `gradle-build.yml` | Build + test Java/Gradle projects with JaCoCo coverage |
+| `go-test.yml` | Build + test Go projects with DinD services |
+| `golangci-lint.yml` | Go static analysis (shared `.golangci.yml` auto-fetched if not present locally) |
+| `docker-publish.yml` | Build Docker image + push to Artifactory |
+| `reuse-compliance.yml` | REUSE/SPDX license header check |
 
 ## Usage
 
@@ -20,29 +20,26 @@ Reusable GitHub Actions workflows for building, testing, and publishing [Horizon
 name: CI
 on:
   push:
-    branches: [main]
-    tags: ["*"]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
+    permissions:
+      contents: read
+      pull-requests: write
     uses: telekom/pubsub-horizon-ci/.github/workflows/gradle-build.yml@main
     with:
       java-version: "21"
-      coverage-overall-min: "60"
-      coverage-changed-min: "80"
 
   reuse:
     uses: telekom/pubsub-horizon-ci/.github/workflows/reuse-compliance.yml@main
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/')
     needs: [build]
     uses: telekom/pubsub-horizon-ci/.github/workflows/docker-publish.yml@main
     with:
       component: starlight
       language: java
+      build-args: "DOCKER_BASE_IMAGE=artifactory.devops.telekom.de/tardis-oci-local/infra/build/pandora-java-21:1.0.0"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
       REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
@@ -54,10 +51,6 @@ jobs:
 name: CI
 on:
   push:
-    branches: [main]
-    tags: ["*"]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
@@ -73,8 +66,7 @@ jobs:
     uses: telekom/pubsub-horizon-ci/.github/workflows/reuse-compliance.yml@main
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [build, lint]
+    needs: [build]
     uses: telekom/pubsub-horizon-ci/.github/workflows/docker-publish.yml@main
     with:
       component: golaris
@@ -92,20 +84,47 @@ Images are pushed to JFrog Artifactory:
 artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
 ```
 
-Pull without authentication (trusted access from intranet):
+### Image tagging
 
+| Git ref | Image tag |
+|---------|-----------|
+| Tag `3.1.0` | `3.1.0` |
+| Branch `main` | `latest` |
+| Branch `feat/xyz` | `feat-xyz` |
+
+Tag format matches GitLab's `CI_COMMIT_REF_SLUG` (lowercase, `/` and `.` → `-`, max 63 chars).
+
+### Pulling images
+
+From company intranet (no auth needed):
 ```
 trusted.artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
 ```
 
-## Secrets required
+From external / GitHub runners (auth required):
+```
+artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
+```
 
-Each component repo needs these GitHub secrets:
+## Secrets
+
+These are org-level GitHub secrets (already configured on all Horizon repos):
 
 | Secret | Value |
 |--------|-------|
 | `ARTIFACTORY_O28M_PUSH_USER` | Artifactory service account username |
 | `ARTIFACTORY_O28M_PUSH_TOKEN` | Artifactory service account token |
+
+## Permissions
+
+Callers that need JaCoCo PR coverage comments must grant:
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+Reusable workflows cannot escalate permissions — the caller must provide them.
 
 ## Components
 
@@ -124,7 +143,7 @@ Each component repo needs these GitHub secrets:
 Java components use a custom base image with gcompat and DT CA certificates:
 
 ```
-trusted.artifactory.devops.telekom.de/tardis-oci-local/infra/build/pandora-java-21:1.0.0
+artifactory.devops.telekom.de/tardis-oci-local/infra/build/pandora-java-21:1.0.0
 ```
 
 ## License
