@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       languages:
-        description: "Comma-separated CodeQL languages (e.g. java-kotlin, go, javascript-typescript)"
+        description: 'JSON array of CodeQL languages (e.g. ["java-kotlin"], ["go"], ["java-kotlin","go"])'
         required: true
         type: string
 
@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ${{ fromJson(format('[{0}]', inputs.languages)) }}
+        language: ${{ fromJson(inputs.languages) }}
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
