@@ -39,7 +39,7 @@ jobs:
     with:
       component: starlight
       language: java
-      build-args: "DOCKER_BASE_IMAGE=artifactory.devops.telekom.de/tardis-oci-local/infra/build/pandora-java-21:1.0.0"
+      build-args: "DOCKER_BASE_IMAGE=artifactory.devops.telekom.de/tardis-oci-local/tardis/infra/build/pandora-java-21:1.0.0"
     secrets:
       REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
       REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
 Images are pushed to JFrog Artifactory:
 
 ```
-artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
+artifactory.devops.telekom.de/tardis-oci-local/tardis/components/horizon/<component>:<tag>
 ```
 
 ### Image tagging
@@ -98,12 +98,12 @@ Tag format matches GitLab's `CI_COMMIT_REF_SLUG` (lowercase, `/` and `.` → `-`
 
 From company intranet (no auth needed):
 ```
-trusted.artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
+trusted.artifactory.devops.telekom.de/mcicd-internal-oci/tardis/components/horizon/<component>:<tag>
 ```
 
 From external / GitHub runners (auth required):
 ```
-artifactory.devops.telekom.de/tardis-oci-local/components/horizon/<component>:<tag>
+artifactory.devops.telekom.de/tardis-oci-local/tardis/components/horizon/<component>:<tag>
 ```
 
 ## Secrets
@@ -143,7 +143,7 @@ Reusable workflows cannot escalate permissions — the caller must provide them.
 Java components use a custom base image with gcompat and DT CA certificates:
 
 ```
-artifactory.devops.telekom.de/tardis-oci-local/infra/build/pandora-java-21:1.0.0
+artifactory.devops.telekom.de/tardis-oci-local/tardis/infra/build/pandora-java-21:1.0.0
 ```
 
 ## License
