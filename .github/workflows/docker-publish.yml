@@ -46,10 +46,10 @@ on:
         type: string
         default: "artifactory.devops.telekom.de"
       image-path:
-        description: "Image path within registry (e.g., tardis-oci-local/components/horizon)"
+        description: "Image path within registry (e.g., tardis-oci-local/tardis/components/horizon)"
         required: false
         type: string
-        default: "tardis-oci-local/components/horizon"
+        default: "tardis-oci-local/tardis/components/horizon"
     secrets:
       REGISTRY_USERNAME:
         description: "Registry push username"
