@@ -98,7 +98,7 @@ Tag format matches GitLab's `CI_COMMIT_REF_SLUG` (lowercase, `/` and `.` → `-`
 
 From company intranet (no auth needed):
 ```
-trusted.artifactory.devops.telekom.de/tardis-oci-local/tardis/components/horizon/<component>:<tag>
+trusted.artifactory.devops.telekom.de/mcicd-internal-oci/tardis/components/horizon/<component>:<tag>
 ```
 
 From external / GitHub runners (auth required):
