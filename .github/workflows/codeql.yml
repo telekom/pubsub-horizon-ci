@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       languages:
-        description: 'JSON array of CodeQL languages (e.g. ["java-kotlin"], ["go"], ["java-kotlin","go"])'
+        description: "JSON array of CodeQL languages (e.g. [\"java-kotlin\"], [\"go\"], [\"java-kotlin\",\"go\"])"
         required: true
         type: string
 
