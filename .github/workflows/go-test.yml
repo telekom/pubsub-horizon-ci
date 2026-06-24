@@ -78,7 +78,9 @@ jobs:
 
       - name: Generate coverage report
         if: inputs.coverage-badge
-        run: go tool cover -html=cover.out -o=./out/reports/coverage-report.html
+        run: |
+          mkdir -p ./out/reports ./out/badges
+          go tool cover -html=cover.out -o=./out/reports/coverage-report.html
 
       - name: Check test coverage
         if: inputs.coverage-badge
