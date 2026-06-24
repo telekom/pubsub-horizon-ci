@@ -60,7 +60,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 env:
   FULL_IMAGE: ${{ inputs.registry-host }}/${{ inputs.image-path }}/${{ inputs.component }}
@@ -156,14 +155,8 @@ jobs:
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: ${{ steps.push.outputs.digest != '' && format('{0}@{1}', env.FULL_IMAGE, steps.push.outputs.digest) || format('{0}:{1}', env.FULL_IMAGE, steps.meta.outputs.tag) }}
-          format: "sarif"
-          output: "trivy-results.sarif"
-          severity: "HIGH,CRITICAL"
           exit-code: "0"
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
-        continue-on-error: true
-        with:
-          sarif_file: "trivy-results.sarif"
-        if: always() && hashFiles('trivy-results.sarif') != ''
+          vuln-type: os
+          format: ${{ github.ref == 'refs/heads/main' && 'github' || 'table' }}
+          output: ${{ github.ref == 'refs/heads/main' && 'dependency-results.sbom.json' || '' }}
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
