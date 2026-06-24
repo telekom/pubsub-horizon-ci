@@ -60,6 +60,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 env:
   FULL_IMAGE: ${{ inputs.registry-host }}/${{ inputs.image-path }}/${{ inputs.component }}
@@ -149,3 +150,19 @@ jobs:
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}" 2>/dev/null | cut -d@ -f2 || echo "")
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
           echo "Pushed: ${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}"
+
+      # --- Trivy vulnerability scan ---
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb # v3
+        with:
+          sarif_file: "trivy-results.sarif"
+        if: always()
