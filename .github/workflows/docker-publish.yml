@@ -149,3 +149,14 @@ jobs:
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}" 2>/dev/null | cut -d@ -f2 || echo "")
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
           echo "Pushed: ${{ env.FULL_IMAGE }}:${{ steps.meta.outputs.tag }}"
+
+      # --- Trivy vulnerability scan ---
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: ${{ steps.push.outputs.digest != '' && format('{0}@{1}', env.FULL_IMAGE, steps.push.outputs.digest) || format('{0}:{1}', env.FULL_IMAGE, steps.meta.outputs.tag) }}
+          exit-code: "0"
+          vuln-type: os
+          format: ${{ github.ref == 'refs/heads/main' && 'github' || 'table' }}
+          output: ${{ github.ref == 'refs/heads/main' && 'dependency-results.sbom.json' || '' }}
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
