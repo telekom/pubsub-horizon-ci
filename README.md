@@ -9,8 +9,9 @@ Reusable GitHub Actions workflows for building, testing, and publishing [Horizon
 | `gradle-build.yml` | Build + test Java/Gradle projects with JaCoCo coverage |
 | `go-test.yml` | Build + test Go projects with DinD services |
 | `golangci-lint.yml` | Go static analysis (shared `.golangci.yml` auto-fetched if not present locally) |
-| `docker-publish.yml` | Build Docker image + push to Artifactory |
+| `docker-publish.yml` | Build Docker image + push to Artifactory + Trivy vulnerability scan |
 | `reuse-compliance.yml` | REUSE/SPDX license header check |
+| `codeql.yml` | CodeQL SAST (static application security testing) |
 
 ## Usage
 
@@ -32,6 +33,14 @@ jobs:
 
   reuse:
     uses: telekom/pubsub-horizon-ci/.github/workflows/reuse-compliance.yml@main
+
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: telekom/pubsub-horizon-ci/.github/workflows/codeql.yml@main
+    with:
+      languages: '["java-kotlin"]'
 
   publish:
     needs: [build]
@@ -65,6 +74,14 @@ jobs:
   reuse:
     uses: telekom/pubsub-horizon-ci/.github/workflows/reuse-compliance.yml@main
 
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: telekom/pubsub-horizon-ci/.github/workflows/codeql.yml@main
+    with:
+      languages: '["go"]'
+
   publish:
     needs: [build]
     uses: telekom/pubsub-horizon-ci/.github/workflows/docker-publish.yml@main
@@ -75,6 +92,37 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
       REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
 ```
+
+## Security Scanning
+
+### Trivy (container vulnerabilities)
+
+Built into `docker-publish.yml` — no extra config needed:
+- **Feature branches:** OS vulnerabilities shown as table in job log
+- **Main branch:** Results submitted to GitHub dependency graph (feeds Dependabot alerts)
+- Scans OS-level vulnerabilities only (library vulns handled by Dependabot on `go.mod`/`build.gradle`)
+- Informational — does not block builds
+
+### CodeQL (SAST)
+
+Caller adds `codeql.yml` job with the target language(s):
+```yaml
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: telekom/pubsub-horizon-ci/.github/workflows/codeql.yml@main
+    with:
+      languages: '["java-kotlin"]'  # or '["go"]' or '["java-kotlin","go"]'
+```
+
+Results appear in GitHub Security > Code scanning alerts.
+
+### Platform-level (automatic, no config)
+
+- **Secret scanning** — auto-enabled on all public telekom org repos
+- **Dependabot alerts** — scans `go.mod` / `build.gradle` for vulnerable dependencies
+- **Xray** — JFrog scans images automatically on push to Artifactory
 
 ## Registry
 
@@ -117,14 +165,14 @@ These are org-level GitHub secrets (already configured on all Horizon repos):
 
 ## Permissions
 
-Callers that need JaCoCo PR coverage comments must grant:
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-```
-
 Reusable workflows cannot escalate permissions — the caller must provide them.
+
+| Job | Required permissions |
+|-----|---------------------|
+| `gradle-build` (with JaCoCo) | `contents: read`, `pull-requests: write` |
+| `codeql` | `contents: read`, `security-events: write` |
+| `docker-publish` | `contents: read` |
+| `go-test`, `golangci-lint`, `reuse-compliance` | `contents: read` (default) |
 
 ## Components
 
