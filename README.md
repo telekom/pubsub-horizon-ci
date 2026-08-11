@@ -165,7 +165,14 @@ These are org-level GitHub secrets (already configured on all Horizon repos):
 
 ## Permissions
 
-Reusable workflows cannot escalate permissions — the caller must provide them.
+Reusable workflows cannot escalate permissions — the caller must provide them via
+`jobs.<job_id>.permissions`.
+
+> **NB!** A `permissions:` block inside a reusable workflow overrides the caller's,
+> restricting it further (it can never add a scope). Leave the block out of the reusable
+> workflow and only document the required permissions here — otherwise the caller's grant
+> is silently dropped and the job fails with
+> `Resource not accessible by integration`.
 
 | Job | Required permissions |
 |-----|---------------------|
